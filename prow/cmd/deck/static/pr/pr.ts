@@ -4,7 +4,7 @@ import {Context} from '../api/github';
 import {Label, PullRequest, UserData} from '../api/pr';
 import {Job, JobState} from '../api/prow';
 import {Blocker, TideData, TidePool, TideQuery as ITideQuery} from '../api/tide';
-import {tidehistory} from '../common/common';
+import {tidehistory, cookie} from '../common/common';
 
 declare const tideData: TideData;
 declare const allBuilds: Job[];
@@ -180,24 +180,6 @@ function onLoadQuery(): string {
 }
 
 /**
- * Gets cookie by its name.
- */
-function getCookieByName(name: string): string {
-    if (!document.cookie) {
-        return "";
-    }
-    const cookies = decodeURIComponent(document.cookie).split(";");
-    for (const cookie of cookies) {
-        const c = cookie.trim();
-        const pref = name + "=";
-        if (c.indexOf(pref) === 0) {
-            return c.slice(pref.length);
-        }
-    }
-    return "";
-}
-
-/**
  * Creates an alert for merge blocking issues on tide.
  */
 function createMergeBlockingIssueAlert(tidePool: TidePool, blockers: Blocker[]): HTMLElement {
@@ -250,7 +232,7 @@ window.onload = () => {
     // Check URL, if the search is empty, adds search query by default format
     // ?is:pr state:open query="author:<user_login>"
     if (window.location.search === "") {
-        const login = getCookieByName("github_login");
+        const login = cookie.getCookieByName("github_login");
         const searchQuery = "is:pr state:open author:" + login;
         window.location.search = "?query=" + encodeURIComponent(searchQuery);
     }
@@ -1154,7 +1136,7 @@ function createPRCard(pr: PullRequest, builds: UnifiedContext[] = [], queries: P
  * Redirect to initiate github login flow.
  */
 function forceGitHubLogin(): void {
-    window.location.href = window.location.origin + "/github-login";
+    window.location.href = window.location.origin + "/github-login?dest=pr";
 }
 
 type VagueState = "succeeded" | "failed" | "pending" | "unknown";

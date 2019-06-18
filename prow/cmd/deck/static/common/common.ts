@@ -201,3 +201,20 @@ export namespace tidehistory {
     return link;
   }
 }
+
+export namespace cookie {
+  export function getCookieByName(name: string): string {
+    if (!document.cookie) {
+      return "";
+    }
+    const cookies = decodeURIComponent(document.cookie).split(";");
+    for (const cookie of cookies) {
+      const c = cookie.trim();
+      const pref = name + "=";
+      if (c.indexOf(pref) === 0) {
+        return c.slice(pref.length);
+      }
+    }
+    return "";
+  }
+}

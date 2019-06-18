@@ -1,6 +1,6 @@
 import moment from "moment";
 import {Job, JobState, JobType} from "../api/prow";
-import {cell, icon} from "../common/common";
+import {cell, icon, cookie} from "../common/common";
 import {FuzzySearch} from './fuzzy-search';
 import {JobHistogram, JobSample} from './histogram';
 
@@ -397,6 +397,7 @@ function escapeRegexLiteral(s: string): string {
 }
 
 function redraw(fz: FuzzySearch): void {
+    const rerunStatus = getParameterByName("rerun");
     const modal = document.getElementById('rerun')!;
     const rerunCommand = document.getElementById('rerun-content')!;
     window.onclick = (event) => {
@@ -648,12 +649,18 @@ function redraw(fz: FuzzySearch): void {
         max = 2 * 3600;
     }
     drawJobHistogram(totalJob, jobHistogram, now - (12 * 3600), now, max);
+    if (rerunStatus != null) {
+        modal.style.display = "block";
+        rerunCommand.innerHTML = `Nice try! The direct rerun feature hasn't been implemented yet, so that button does nothing.`;
+    }
+
 }
 
 function createRerunCell(modal: HTMLElement, rerunElement: HTMLElement, prowjob: string): HTMLTableDataCellElement {
-    const url = `https://${window.location.hostname}/rerun?prowjob=${prowjob}`;
+    const url = `/rerun?prowjob=${prowjob}`;
     const c = document.createElement("td");
     const i = icon.create("refresh", "Show instructions for rerunning this job");
+    const login = cookie.getCookieByName("github_login");
     i.onclick = () => {
         modal.style.display = "block";
         rerunElement.innerHTML = `kubectl create -f "<a href="${url}">${url}</a>"`;
@@ -662,6 +669,14 @@ function createRerunCell(modal: HTMLElement, rerunElement: HTMLElement, prowjob:
         copyButton.onclick = () => copyToClipboardWithToast(`kubectl create -f "${url}"`);
         copyButton.innerHTML = "<i class='material-icons state triggered' style='color: gray'>file_copy</i>";
         rerunElement.appendChild(copyButton);
+        const runButton = document.createElement('a');
+        runButton.innerHTML = "<button class='mdl-button mdl-js-button'>Run</button>";
+        if (login === "") {
+            i.href = `/github-login?dest=%2F?rerun=work_in_progress`;
+        } else {
+            runButton.href = `/?rerun=work_in_progress`;
+        }
+        rerunElement.appendChild(runButton);
     };
     c.appendChild(i);
     c.classList.add("icon-cell");
