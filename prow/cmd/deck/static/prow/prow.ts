@@ -7,6 +7,7 @@ import {JobHistogram, JobSample} from './histogram';
 declare const allBuilds: Job[];
 declare const spyglass: boolean;
 declare const rerunCreatesJob: boolean;
+declare const csrfToken: string;
 
 // http://stackoverflow.com/a/5158301/3694
 function getParameterByName(name: string): string | null {
@@ -686,6 +687,11 @@ function createRerunCell(modal: HTMLElement, rerunElement: HTMLElement, prowjob:
                     const form = document.createElement('form');
                     form.method = 'POST';
                     form.action = `${url}`;
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = 'gorilla.csrf.Token';
+                    tokenInput.value = csrfToken;
+                    form.append(tokenInput);
                     c.appendChild(form);
                     form.submit();
                 };

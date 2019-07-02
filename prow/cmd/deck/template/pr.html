@@ -5,6 +5,9 @@
     <script type="text/javascript" src="/static/pr_bundle.min.js"></script>
     <script type="text/javascript" src="data.js?var=allBuilds"></script>
     <script type="text/javascript" src="tide.js?var=tideData"></script>
+    <script type="text/javascript">
+      var csrfToken = {{.CSRFToken}};
+    </script>
 {{end}}
 {{define "content"}}
 <div id="pr-container">

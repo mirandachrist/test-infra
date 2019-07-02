@@ -3,6 +3,7 @@ import { isTransitMessage } from "./common";
 declare const src: string;
 declare const lensArtifacts: {[key: string]: string[]};
 declare const lensIndexes: number[];
+declare const csrfToken: string;
 
 // Loads views for this job
 function loadLenses(): void {
@@ -58,13 +59,13 @@ window.addEventListener('message', async (e) => {
         break;
       case "request": {
         const req = await fetch(urlForLensRequest(lens, index, 'callback'),
-          {body: message.data, method: 'POST'});
+          {body: message.data, method: 'POST', headers: {'X-CSRF-Token': csrfToken}});
         respond(await req.text());
         break;
       }
       case "requestPage": {
         const req = await fetch(urlForLensRequest(lens, index, 'rerender'),
-          {body: message.data, method: 'POST'});
+          {body: message.data, method: 'POST', headers: {'X-CSRF-Token': csrfToken}});
         respond(await req.text());
         break;
       }
@@ -73,7 +74,7 @@ window.addEventListener('message', async (e) => {
         frame.style.visibility = 'visible';
         spinner.style.display = 'block';
         const req = await fetch(urlForLensRequest(lens, index, 'rerender'),
-          {body: message.data, method: 'POST'});
+          {body: message.data, method: 'POST', headers: {'X-CSRF-Token': csrfToken}});
         respond(await req.text());
         break;
       }

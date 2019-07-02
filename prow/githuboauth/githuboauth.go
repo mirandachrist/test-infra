@@ -127,7 +127,7 @@ func (ga *Agent) HandleLogin(client OAuthClient) http.HandlerFunc {
 		stateToken := xsrftoken.Generate(ga.gc.ClientSecret, "", "")
 		state := hex.EncodeToString([]byte(stateToken))
 		oauthSession, err := ga.gc.CookieStore.New(r, oauthSessionCookie)
-		oauthSession.Options.Secure = true
+		oauthSession.Options.Secure = false
 		oauthSession.Options.HttpOnly = true
 		if err != nil {
 			ga.serverError(w, "Creating new OAuth session", err)
@@ -260,7 +260,7 @@ func (ga *Agent) HandleRedirect(client OAuthClient, getter GitHubClientGetter) h
 
 		// New session that stores the token.
 		session, err := ga.gc.CookieStore.New(r, tokenSession)
-		session.Options.Secure = true
+		session.Options.Secure = false
 		session.Options.HttpOnly = true
 		if err != nil {
 			ga.serverError(w, "Create new session", err)
@@ -283,7 +283,7 @@ func (ga *Agent) HandleRedirect(client OAuthClient, getter GitHubClientGetter) h
 			Value:   *user.Login,
 			Path:    "/",
 			Expires: time.Now().Add(time.Hour * 24 * 30),
-			Secure:  true,
+			Secure:  false,
 		})
 		http.Redirect(w, r, finalRedirectURL.String(), http.StatusFound)
 	}

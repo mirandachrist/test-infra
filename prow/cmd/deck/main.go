@@ -36,6 +36,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/NYTimes/gziphandler"
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/sessions"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -93,6 +94,7 @@ type options struct {
 	spyglassFilesLocation string
 	gcsCredentialsFile    string
 	rerunCreatesJob       bool
+	csrfTokenFile         string
 }
 
 func (o *options) Validate() error {
@@ -139,6 +141,8 @@ func gatherOptions(fs *flag.FlagSet, args ...string) options {
 	fs.StringVar(&o.templateFilesLocation, "template-files-location", "/template", "Path to the template files")
 	fs.StringVar(&o.gcsCredentialsFile, "gcs-credentials-file", "", "Path to the GCS credentials file")
 	fs.BoolVar(&o.rerunCreatesJob, "rerun-creates-job", false, "Change the re-run option in Deck to actually create the job. **WARNING:** Only use this with non-public deck instances, otherwise strangers can DOS your Prow instance")
+	// csrfTokenFile, if specified, must point to a file containing a 32 byte token that will be used to protect against CSRF in POST requests
+	fs.StringVar(&o.csrfTokenFile, "csrf-token", "/etc/token/secret", "Path to the file containing the CSRF token.")
 	o.kubernetes.AddFlags(fs)
 	fs.Parse(args)
 	o.configPath = config.ConfigPath(o.configPath)
@@ -272,8 +276,6 @@ func main() {
 	mux.Handle("/tide-history", gziphandler.GzipHandler(handleSimpleTemplate(o, cfg, "tide-history.html", nil)))
 	mux.Handle("/plugins", gziphandler.GzipHandler(handleSimpleTemplate(o, cfg, "plugins.html", nil)))
 
-	indexHandler := handleSimpleTemplate(o, cfg, "index.html", struct{ SpyglassEnabled, ReRunCreatesJob bool }{o.spyglass, o.rerunCreatesJob})
-
 	runLocal := o.pregeneratedData != ""
 
 	var fallbackHandler func(http.ResponseWriter, *http.Request)
@@ -289,6 +291,10 @@ func main() {
 			fallbackHandler(w, r)
 			return
 		}
+		indexHandler := handleSimpleTemplate(o, cfg, "index.html", struct {
+			SpyglassEnabled bool
+			ReRunCreatesJob bool
+		}{o.spyglass, o.rerunCreatesJob})
 		indexHandler(w, r)
 	})
 
@@ -301,8 +307,24 @@ func main() {
 	// signal to the world that we're ready
 	health.ServeReady()
 
+	if o.rerunCreatesJob && o.csrfTokenFile == "" {
+		logrus.Warning("Allowing direct reruns is susceptible to CSRF attacks. We will soon be requiring you to specify a file containing a CSRF token if --rerun-creates-job is enabled.")
+	}
+
+	// if a CSRF token is specified, we protect against CSRF in all post requests
+	if o.csrfTokenFile != "" {
+		csrfToken, err := loadToken(o.csrfTokenFile)
+		if err != nil {
+			logrus.WithError(err).Fatal("Could not retrieve CSRF token.")
+		}
+		// in development, pass in csrf.Secure(false)
+		CSRF := csrf.Protect(csrfToken, csrf.Path("/"), csrf.Secure(false))
+		logrus.WithError(http.ListenAndServe(":8080", CSRF(traceHandler(mux)))).Fatal("ListenAndServe returned.")
+		return
+	}
 	// setup done, actually start the server
 	logrus.WithError(http.ListenAndServe(":8080", traceHandler(mux))).Fatal("ListenAndServe returned.")
+
 }
 
 // localOnlyMain contains logic used only when running locally, and is mutually exclusive with
@@ -724,7 +746,8 @@ func handleRequestJobViews(sg *spyglass.Spyglass, cfg config.Getter, o options) 
 		setHeadersNoCaching(w)
 		src := strings.TrimPrefix(r.URL.Path, "/view/")
 
-		page, err := renderSpyglass(sg, cfg, src, o)
+		csrfToken := csrf.Token(r)
+		page, err := renderSpyglass(sg, cfg, src, o, csrfToken)
 		if err != nil {
 			logrus.WithError(err).Error("error rendering spyglass page")
 			message := fmt.Sprintf("error rendering spyglass page: %v", err)
@@ -743,7 +766,7 @@ func handleRequestJobViews(sg *spyglass.Spyglass, cfg config.Getter, o options) 
 }
 
 // renderSpyglass returns a pre-rendered Spyglass page from the given source string
-func renderSpyglass(sg *spyglass.Spyglass, cfg config.Getter, src string, o options) (string, error) {
+func renderSpyglass(sg *spyglass.Spyglass, cfg config.Getter, src string, o options, csrfToken string) (string, error) {
 	renderStart := time.Now()
 
 	src = strings.TrimSuffix(src, "/")
@@ -912,7 +935,7 @@ lensesLoop:
 	}
 	t := template.New("spyglass.html")
 
-	if _, err := prepareBaseTemplate(o, cfg, t); err != nil {
+	if _, err := prepareBaseTemplate(o, cfg, csrfToken, t); err != nil {
 		return "", fmt.Errorf("error preparing base template: %v", err)
 	}
 	t, err = t.ParseFiles(path.Join(o.templateFilesLocation, "spyglass.html"))
