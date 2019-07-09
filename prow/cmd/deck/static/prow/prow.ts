@@ -683,17 +683,26 @@ function createRerunCell(modal: HTMLElement, rerunElement: HTMLElement, prowjob:
             runButton.href = `/github-login?dest=%2F?rerun=work_in_progress`;
         } else {
             if (rerunCreatesJob) {
-                runButton.onclick = () => {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = `${url}`;
-                    const tokenInput = document.createElement('input');
-                    tokenInput.type = 'hidden';
-                    tokenInput.name = 'gorilla.csrf.Token';
-                    tokenInput.value = csrfToken;
-                    form.append(tokenInput);
-                    c.appendChild(form);
-                    form.submit();
+                runButton.onclick = async () => {
+                  const result = await fetch(url, {
+                    method: 'post',
+                    headers: {
+                      "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+                      "X-CSRF-Token": csrfToken,
+                    },
+                  });
+                  const data = await result.text();
+                  // const form = document.createElement('form');
+                  //   form.method = 'POST';
+                  //   form.action = `${url}`;
+                  //   const tokenInput = document.createElement('input');
+                  //   tokenInput.type = 'hidden';
+                  //   tokenInput.name = 'gorilla.csrf.Token';
+                  //   tokenInput.value = csrfToken;
+                  //   form.append(tokenInput);
+                  //   c.appendChild(form);
+                  //   form.submit();
+                  rerunElement.innerHTML = data;
                 };
             } else {
                 runButton.href = `/?rerun=work_in_progress`;
