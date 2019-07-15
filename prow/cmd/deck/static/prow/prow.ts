@@ -692,16 +692,6 @@ function createRerunCell(modal: HTMLElement, rerunElement: HTMLElement, prowjob:
                     },
                   });
                   const data = await result.text();
-                  // const form = document.createElement('form');
-                  //   form.method = 'POST';
-                  //   form.action = `${url}`;
-                  //   const tokenInput = document.createElement('input');
-                  //   tokenInput.type = 'hidden';
-                  //   tokenInput.name = 'gorilla.csrf.Token';
-                  //   tokenInput.value = csrfToken;
-                  //   form.append(tokenInput);
-                  //   c.appendChild(form);
-                  //   form.submit();
                   rerunElement.innerHTML = data;
                 };
             } else {

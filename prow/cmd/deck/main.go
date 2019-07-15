@@ -1246,7 +1246,7 @@ func handleRerun(prowJobClient prowv1.ProwJobInterface, createProwJob bool, cfg 
 				return
 			}
 			if !canTriggerJob(login, cfg()) {
-				if _, err := w.Write([]byte("You don't have permission to rerun that job.")); err != nil {
+				if _, err := w.Write([]byte("Error: you don't have permission to rerun that job.")); err != nil {
 					l.WithError(err).Error("Error writing to rerun response.")
 				}
 				return
