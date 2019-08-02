@@ -53,6 +53,9 @@ spec:
         - --job-config-path=/etc/job-config
         - --spyglass=true
         - --rerun-creates-job
+        - --github-token-path=/etc/github/oauth
+        - --github-endpoint=http://ghproxy
+        - --github-endpoint=https://api.github.com
         volumeMounts:
         - name: oauth-config
           mountPath: /etc/github
