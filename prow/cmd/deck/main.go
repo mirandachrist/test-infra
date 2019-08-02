@@ -1333,6 +1333,7 @@ func handleRerun(prowJobClient prowv1.ProwJobInterface, createProwJob bool, cfg 
 					return
 				}
 				allowed, err = canTriggerJob(login, newPJ, authConfig, cli)
+				logrus.Info(fmt.Sprintf("Attempted rerun: user: %s, job: %s, allowed: %t", login, newPJ.Spec.Job, allowed))
 				if err != nil {
 					http.Error(w, fmt.Sprintf("Error checking if user can trigger job: %v", err), http.StatusInternalServerError)
 					l.WithError(err).Errorf("Error checking if user can trigger job")
